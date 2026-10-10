@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>向上數心算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Gaegu:wght@700&display=swap">
+<style>
+/* Layout: one paper "board" — caption on top, big circle left, waiting stars right, controls below. Single soft-paper look by choice. */
+:root{
+  --paper:#fbf7ef; --ink:#4a4057; --ink-soft:#8a7f96;
+  --pink:#f7c6d0; --mint:#bfe6d6; --sky:#c6dcf5; --lilac:#dccdf2; --lemon:#fbe7a6;
+  --gold:#f2c14e; --gold-deep:#d99a1e;
+  --hand:"LXGW WenKai TC","Kaiti TC","STKaiti","PingFang TC","Microsoft JhengHei",sans-serif;
+  --digit:"Gaegu","LXGW WenKai TC","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--hand);
+  background-image:radial-gradient(circle at 1px 1px, rgba(74,64,87,.07) 1px, transparent 0);background-size:22px 22px;}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:18px 28px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(22px,4.5vw,32px);font-weight:700;letter-spacing:.04em}
+h1 small{font-size:.55em;color:var(--ink-soft);font-weight:400;margin-left:.4em}
+.tag{font-size:15px;color:var(--ink-soft)}
+
+.board{position:relative;border:3px solid var(--ink);border-radius:26px 18px 30px 16px / 18px 28px 16px 26px;
+  background:#fffdf8;min-height:clamp(380px,62vw,470px);overflow:hidden;
+  box-shadow:6px 7px 0 var(--lilac);}
+.caption{position:absolute;top:18px;left:0;right:0;text-align:center;font-size:clamp(20px,4vw,28px);font-weight:700;padding-inline:16px;
+  transition:opacity .4s}
+.caption mark{background:linear-gradient(transparent 55%, var(--lemon) 55%);color:inherit;padding:0 .1em}
+.bigword{position:absolute;top:58px;left:0;right:0;text-align:center;font-size:clamp(56px,13vw,96px);font-weight:700;color:var(--ink);
+  opacity:0;pointer-events:none;-webkit-text-stroke:1px var(--ink);text-shadow:4px 4px 0 var(--pink)}
+.bigword.pop{animation:pop 1.1s ease-out both}
+@keyframes pop{0%{opacity:0;transform:scale(.3) rotate(-8deg)}25%{opacity:1;transform:scale(1.15) rotate(3deg)}45%{transform:scale(.97) rotate(-1deg)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05) translateY(-10px)}}
+
+.scene{position:absolute;inset:150px 0 30px;display:flex;align-items:center;justify-content:space-around;gap:12px;padding-inline:12px}
+.circle-box{position:relative;width:clamp(150px,30vw,210px);aspect-ratio:1;max-width:100%}
+.circle{position:absolute;inset:0;display:grid;place-items:center;animation:breathe 2.6s ease-in-out infinite;transition:transform .6s}
+.circle svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.circle .num{position:relative;font-family:var(--digit);font-size:clamp(70px,15vw,108px);line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.circle.flash .fill{animation:flash .55s ease-out}
+@keyframes flash{0%{fill:#fff6c9}100%{fill:var(--c-fill)}}
+.circle.flash .num{animation:bump .5s ease-out}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+.circle.done{animation:none;transform:scale(1.15)}
+.mind{position:absolute;bottom:-34px;left:0;right:0;text-align:center;font-size:16px;color:var(--ink-soft)}
+
+/* 十格板 */
+.frames-box{--cell:clamp(34px,7.4vw,48px);display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}
+.frame{display:grid;grid-template-columns:repeat(5,var(--cell));grid-auto-rows:var(--cell);background:#fff;
+  border:3px solid var(--ink);border-radius:10px 6px 12px 5px / 6px 12px 5px 10px;overflow:hidden;transition:background .6s, box-shadow .6s}
+.cell{position:relative;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);display:grid;place-items:center}
+.cell:nth-child(5n){border-right:0}
+.cell:nth-child(n+6){border-bottom:0}
+.cell.flash{animation:cellFlash .6s ease-out}
+@keyframes cellFlash{0%{background:#fff3b0}100%{background:transparent}}
+.apple{position:absolute;inset:7%;width:86%;height:86%}
+.apple.base{color:#f29ca3}
+.apple.added{color:#9fd8b8}
+.apple.in{animation:appleIn .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes appleIn{from{transform:scale(0) rotate(-20deg)}to{transform:scale(1)}}
+.no{position:relative;font-family:var(--digit);font-size:calc(var(--cell)*.4);line-height:1;color:#fff;margin-top:12%;
+  text-shadow:-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink);font-variant-numeric:tabular-nums}
+.frames-count{font-size:17px;color:var(--ink-soft)}
+.frames-count b{font-family:var(--digit);font-size:1.4em;color:var(--ink)}
+.frames-box.done .frame{background:#fff1c4;box-shadow:0 0 0 4px var(--gold)}
+.mode-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+.mode-row span{font-size:16px;color:var(--ink-soft)}
+.mode-row .chip{font-family:var(--hand);font-size:18px}
+/* 手指頭 */
+.hand-box{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0;transform:scale(.6);transition:opacity .4s, transform .5s cubic-bezier(.3,1.5,.5,1)}
+.hand-box.show{opacity:1;transform:none}
+.hand{width:clamp(120px,24vw,175px);height:auto;overflow:visible}
+.finger{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(.5);transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+.finger.raised{transform:scaleY(1)}
+.thumb{transform-box:view-box;transform-origin:41px 195px;transform:rotate(62deg);transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+.thumb.raised{transform:rotate(-28deg)}
+.finger.tapped{fill:#fbe7a6;animation:tapF .45s ease-out}
+.thumb.tapped rect{fill:#fbe7a6}
+@keyframes tapF{0%{transform:scaleY(1)}40%{transform:scaleY(.86)}100%{transform:scaleY(1)}}
+.badge{opacity:0;transition:opacity .3s}
+.badge.on{opacity:1}
+.badge.on circle{animation:badgePop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes badgePop{from{r:4}to{r:18}}
+.badge text{font-family:var(--digit);font-size:22px;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.hand-count{font-size:16px;color:var(--ink-soft);text-align:center}
+.hand-count b{font-family:var(--digit);font-size:1.4em;color:var(--ink)}
+.stars{display:flex;flex-direction:column;gap:14px;align-items:center;min-height:200px;justify-content:center}
+.star{width:clamp(50px,9vw,64px);height:clamp(50px,9vw,64px);opacity:0;transform:scale(.2)}
+.star.show{animation:starIn .5s cubic-bezier(.3,1.6,.5,1) forwards}
+@keyframes starIn{to{opacity:1;transform:scale(1)}}
+.star.wiggle{animation:wig 1.2s ease-in-out infinite}
+@keyframes wig{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.star.gone{visibility:hidden}
+.flyer{position:absolute;pointer-events:none;z-index:5}
+
+.equation{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-family:var(--digit);font-size:clamp(38px,8vw,58px);opacity:0;transform:translateY(16px);transition:.6s}
+.equation.show{opacity:1;transform:none}
+.equation b{color:var(--gold-deep)}
+#confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center}
+.btn{font-family:var(--hand);font-size:20px;font-weight:700;color:var(--ink);background:var(--mint);border:2.5px solid var(--ink);
+  border-radius:18px 12px 20px 10px / 12px 20px 10px 18px;padding:10px 22px;cursor:pointer;box-shadow:3px 4px 0 var(--ink);transition:transform .1s, box-shadow .1s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 5px 0 var(--ink)}
+.btn:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn:focus-visible{outline:3px dashed var(--gold-deep);outline-offset:4px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:3px 4px 0 var(--ink)}
+.btn.main{background:var(--pink);font-size:24px;padding:12px 30px}
+.btn.alt{background:var(--sky)}
+.picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+.picker span{font-size:16px;color:var(--ink-soft)}
+.chip{font-family:var(--digit);font-size:22px;background:#fff;border:2px solid var(--ink);border-radius:14px 10px 14px 8px;padding:4px 14px;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--lemon);box-shadow:2px 3px 0 var(--ink)}
+.chip:focus-visible{outline:3px dashed var(--gold-deep);outline-offset:3px}
+.voice-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+.voice-row label{font-size:16px;color:var(--ink-soft)}
+.voice-row select{font-family:var(--hand);font-size:17px;color:var(--ink);background:#fff;border:2px solid var(--ink);
+  border-radius:12px 8px 12px 8px;padding:6px 10px;max-width:min(100%,340px);min-width:0;cursor:pointer}
+.voice-row select:focus-visible{outline:3px dashed var(--gold-deep);outline-offset:3px}
+.btn.small{font-size:16px;padding:6px 14px;box-shadow:2px 3px 0 var(--ink);background:var(--lemon)}
+.note{font-size:14px;color:var(--ink-soft);text-align:center;margin:0}
+.voice-warn{font-size:14px;color:#b0566a;text-align:center;margin:0}
+
+/* 多顆星星、兩隻手 */
+.stars.many{display:grid;grid-template-columns:repeat(3,auto);gap:8px;justify-items:center;align-content:center}
+.stars.many .star{width:clamp(38px,7vw,48px);height:clamp(38px,7vw,48px)}
+.hands{display:flex;gap:4px;align-items:flex-end}
+.hand-box.two .hand{width:clamp(84px,15vw,128px)}
+
+/* 首頁 */
+.home{display:flex;flex-direction:column;gap:18px}
+.home-card{border:3px solid var(--ink);border-radius:26px 18px 30px 16px / 18px 28px 16px 26px;background:#fffdf8;
+  box-shadow:6px 7px 0 var(--mint);padding:clamp(18px,4vw,32px);display:flex;flex-direction:column;gap:18px}
+.home-card h2{margin:0;font-size:clamp(22px,4vw,28px)}
+.home-lead{margin:0;font-size:17px;color:var(--ink-soft);line-height:1.6;max-width:36em}
+.range-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.range{border:2.5px dashed var(--ink);border-radius:16px 10px 18px 10px;padding:12px 16px 16px;margin:0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;min-width:0}
+.range.a{background:#fdeef1}.range.b{background:#fff8de}
+.range legend{font-size:19px;font-weight:700;padding:0 6px}
+.range legend small{font-weight:400;color:var(--ink-soft);font-size:.8em}
+.range label{font-size:18px;display:flex;align-items:center;gap:6px}
+.range select,.sheet-card select{font-family:var(--digit);font-size:24px;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:10px;padding:2px 10px;cursor:pointer}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:17px;line-height:1.5;cursor:pointer}
+.check input{width:20px;height:20px;margin-top:3px;accent-color:var(--gold-deep);flex:none}
+.home-foot{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+.pair-count{font-size:17px;color:var(--ink-soft)}
+.pair-count b{font-family:var(--digit);font-size:1.5em;color:var(--ink)}
+.pair-count.bad{color:#b0566a}
+.home-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.home-steps li{background:#fff;border:2px solid var(--ink);border-radius:14px 10px 16px 8px;padding:10px 14px;font-size:16px;line-height:1.5}
+.home-steps b{display:block;font-size:18px}
+.tools-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+.range-tag{font-size:15px;color:var(--ink-soft);background:#fff;border:1.5px dashed var(--ink-soft);border-radius:10px;padding:4px 10px}
+
+/* 作業單面板 */
+.sheet-panel{position:fixed;inset:0;background:rgba(74,64,87,.35);display:grid;place-items:center;padding:16px;z-index:20}
+.sheet-card{background:#fffdf8;border:3px solid var(--ink);border-radius:22px 14px 24px 12px;box-shadow:6px 7px 0 var(--sky);
+  width:min(100%,460px);max-height:100%;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:14px}
+.sheet-card h2{margin:0;font-size:24px}
+.sheet-card p{margin:0;font-size:16px;color:var(--ink-soft);line-height:1.6}
+.sheet-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:17px}
+.sheet-btns{display:flex;flex-wrap:wrap;gap:10px}
+.sheet-btns .btn{flex:1 1 150px}
+.sheet-status{min-height:1.5em;font-size:16px;color:var(--ink)}
+.sheet-status.err{color:#b0566a}
+.close-x{align-self:flex-end;font-family:var(--hand);font-size:16px;background:none;border:none;color:var(--ink-soft);cursor:pointer;text-decoration:underline}
+
+@media (max-width:520px){
+  .scene{inset:140px 0 70px}
+  .stars{min-height:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .circle{animation:none}.star.wiggle{animation:none}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="4"/></filter>
+    <symbol id="starShape" viewBox="0 0 100 100">
+      <path d="M50 6 L62 37 L95 39 L69 59 L78 92 L50 73 L22 92 L31 59 L5 39 L38 37 Z" fill="#fbe08a" stroke="#4a4057" stroke-width="5" stroke-linejoin="round" filter="url(#rough)"/>
+      <path d="M40 30 L46 18" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="appleShape" viewBox="0 0 100 100">
+      <path d="M50 30 C32 16 8 26 10 54 C12 82 32 98 50 88 C68 98 88 82 90 54 C92 26 68 16 50 30 Z" fill="currentColor" stroke="#4a4057" stroke-width="5" stroke-linejoin="round" filter="url(#rough)"/>
+      <path d="M50 30 C50 20 52 12 57 6" fill="none" stroke="#4a4057" stroke-width="5" stroke-linecap="round"/>
+      <path d="M55 20 C62 8 77 9 80 13 C73 23 62 25 55 20 Z" fill="#8fcf8f" stroke="#4a4057" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M24 44 C24 38 28 34 32 32" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>心算加法<small>向上數 Counting On</small></h1>
+    <span class="tag">打開聲音，跟著一起數</span>
+  </header>
+
+  <section class="home" id="home">
+    <div class="home-card">
+      <h2>今天要練習哪些題目？</h2>
+      <p class="home-lead">選好前面的數（被加數）和後面的數（加數）的範圍，系統會從範圍裡出題。向上數的時候，要先把大的數記在心裡，所以建議勾選「大數放前面」。</p>
+      <div class="range-grid">
+        <fieldset class="range a">
+          <legend>被加數 <small>前面的數</small></legend>
+          <label for="aMin">從 <select id="aMin"></select></label>
+          <label for="aMax">到 <select id="aMax"></select></label>
+        </fieldset>
+        <fieldset class="range b">
+          <legend>加數 <small>往上數幾個</small></legend>
+          <label for="bMin">從 <select id="bMin"></select></label>
+          <label for="bMax">到 <select id="bMax"></select></label>
+        </fieldset>
+      </div>
+      <label class="check" for="bigFirst"><input type="checkbox" id="bigFirst" checked>大數放前面（被加數不小於加數，例如 8 + 3，不會出 3 + 8）</label>
+      <div class="home-foot">
+        <span class="pair-count" id="pairCount"></span>
+        <button class="btn main" id="startBtn" type="button">開始學習 →</button>
+      </div>
+    </div>
+    <ul class="home-steps">
+      <li><b>① 大數記在心裡</b>畫面先出現被加數，跟著唸一次。</li>
+      <li><b>② 一個一個往上數</b>用星星或手指頭，接著往上數。</li>
+      <li><b>③ 得出答案</b>數完就是答案，也能輸出作業單練習。</li>
+    </ul>
+  </section>
+
+  <section id="learn" hidden style="display:flex;flex-direction:column;gap:16px">
+  <div class="board" id="board">
+    <div class="caption" id="caption">按下「播放」，一起來心算 <mark>8 + 3</mark></div>
+    <div class="bigword" id="bigword" aria-live="polite"></div>
+
+    <div class="scene">
+      <div class="circle-box">
+        <div class="circle" id="circle" style="--c-fill:#f7c6d0">
+          <svg viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="fill" cx="100" cy="100" r="88" style="fill:var(--c-fill);transition:fill .6s" stroke="#4a4057" stroke-width="5" filter="url(#rough)"/>
+            <circle cx="100" cy="100" r="94" fill="none" stroke="#4a4057" stroke-width="2" stroke-dasharray="6 9" opacity=".5" filter="url(#rough)"/>
+          </svg>
+          <span class="num" id="num">8</span>
+        </div>
+        <div class="mind" id="mind">記在心裡</div>
+      </div>
+      <div class="frames-box" id="framesBox" hidden>
+        <div class="frames" id="frames" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div class="frames-count">共 <b id="framesCount">8</b> 個</div>
+      </div>
+      <div class="stars" id="stars"></div>
+      <div class="hand-box" id="handBox" hidden>
+        <div class="hands">
+          <svg class="hand" id="hand" viewBox="-22 -22 232 270" aria-label="第一隻手"></svg>
+          <svg class="hand" id="hand2" viewBox="-22 -22 232 270" aria-label="第二隻手" hidden></svg>
+        </div>
+        <div class="hand-count" id="handLabel"></div>
+      </div>
+    </div>
+
+    <div class="equation" id="equation"></div>
+    <canvas id="confetti"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="btn main" id="mainBtn" type="button">▶ 播放</button>
+    <button class="btn alt" id="replayBtn" type="button">↺ 重新播放</button>
+    <button class="btn" id="nextBtn" type="button">下一題 ➜</button>
+  </div>
+  <div class="tools-row">
+    <button class="btn small" id="homeBtn" type="button">🏠 回首頁</button>
+    <span class="range-tag" id="rangeTag"></span>
+    <button class="btn small" id="sheetBtn" type="button">📄 輸出作業單</button>
+  </div>
+  <div class="mode-row" role="group" aria-label="表徵方式">
+    <span>左邊顯示：</span>
+    <button class="chip" type="button" data-mode="number" aria-pressed="true">大數字</button>
+    <button class="chip" type="button" data-mode="frame" aria-pressed="false">十格板（蘋果）</button>
+  </div>
+  <div class="mode-row" role="group" aria-label="往上數的工具">
+    <span>右邊顯示：</span>
+    <button class="chip" type="button" data-add="star" aria-pressed="true">星星</button>
+    <button class="chip" type="button" data-add="hand" aria-pressed="false">手指頭</button>
+  </div>
+  <div class="voice-row">
+    <label for="voiceSel">朗讀聲音：</label>
+    <select id="voiceSel"><option value="">載入中…</option></select>
+    <button class="btn small" id="testVoice" type="button">🔈 試聽</button>
+  </div>
+  <p class="voice-warn" id="voiceWarn" hidden>這個瀏覽器沒有中文語音，動畫照常播放，請老師幫忙唸出來。</p>
+  <p class="note">語音使用瀏覽器內建的台灣中文聲音，第一次請先點按鈕才會發聲。</p>
+  </section>
+</div>
+
+<div class="sheet-panel" id="sheetPanel" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-card">
+    <h2 id="sheetTitle">輸出作業單</h2>
+    <p id="sheetRange"></p>
+    <div class="sheet-row">
+      <label for="sheetCount">題數：</label>
+      <select id="sheetCount"><option value="10">10 題</option><option value="20" selected>20 題</option></select>
+    </div>
+    <label class="check" for="sheetHint"><input type="checkbox" id="sheetHint" checked>每題附提示：「記住 ___，往上數 ___ 個」</label>
+    <label class="check" for="sheetKey"><input type="checkbox" id="sheetKey" checked>最後附答案頁（給老師對答案）</label>
+    <div class="sheet-btns">
+      <button class="btn" id="docxBtn" type="button" style="background:var(--sky)">下載 Word</button>
+      <button class="btn" id="pdfBtn" type="button" style="background:var(--pink)">下載 PDF</button>
+    </div>
+    <div class="sheet-status" id="sheetStatus" aria-live="polite"></div>
+    <button class="close-x" id="sheetClose" type="button">關閉</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const caption=$('caption'), bigword=$('bigword'), circle=$('circle'), num=$('num'),
+        starsBox=$('stars'), equation=$('equation'), mainBtn=$('mainBtn'), replayBtn=$('replayBtn'),
+        board=$('board'), mind=$('mind'), canvas=$('confetti'), voiceWarn=$('voiceWarn');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const circleBox=document.querySelector('.circle-box'), framesBox=$('framesBox'), framesEl=$('frames'), framesCount=$('framesCount');
+  let mode='number';
+  try{ if(localStorage.getItem('countingOnMode')==='frame') mode='frame'; }catch(e){}
+
+  /* ---------- 十格板 ---------- */
+  function addApple(i, added){            // i：第幾個（1 起算）
+    const cell=framesEl.querySelectorAll('.cell')[i-1]; if(!cell) return;
+    cell.innerHTML=`<svg class="apple ${added?'added in':'base'}" viewBox="0 0 100 100" aria-hidden="true"><use href="#appleShape"/></svg><span class="no">${i}</span>`;
+    cell.setAttribute('aria-label',`第 ${i} 個蘋果`);
+    if(added){ cell.classList.remove('flash'); void cell.offsetWidth; cell.classList.add('flash'); }
+  }
+  function buildFrames(){
+    const total=A+B, nFrames=Math.max(1,Math.ceil(total/10));
+    framesEl.innerHTML='';
+    for(let f=0;f<nFrames;f++){
+      const fr=document.createElement('div'); fr.className='frame';
+      for(let k=0;k<10;k++){ const c=document.createElement('div'); c.className='cell'; fr.appendChild(c); }
+      framesEl.appendChild(fr);
+    }
+    for(let i=1;i<=A;i++) addApple(i,false);
+    framesCount.textContent=A;
+  }
+  const cellAt = i => framesEl.querySelectorAll('.cell')[i-1];
+
+  /* ---------- 手指頭 ---------- */
+  const handBox=$('handBox'), handSvgs=[$('hand'),$('hand2')], handLabel=$('handLabel');
+  let addMode='star';
+  try{ if(localStorage.getItem('countingOnAdd')==='hand') addMode='hand'; }catch(e){}
+  // 伸出順序：食指 → 中指 → 無名指 → 小指 → 大拇指
+  const FINGERS=[
+    {x:52,y:34,w:30,h:120},{x:86,y:20,w:30,h:134},{x:120,y:30,w:30,h:124},{x:152,y:58,w:26,h:96}
+  ];
+  const SKIN='#fde2cc', INK='#4a4057';
+  function buildHand(){
+    let s='<g>';
+    FINGERS.forEach((f,i)=>{
+      s+=`<rect class="finger" data-i="${i}" x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" rx="${f.w/2}" fill="${SKIN}" stroke="${INK}" stroke-width="4" vector-effect="non-scaling-stroke"/>`;
+    });
+    s+='</g>';
+    s+=`<rect x="44" y="118" width="140" height="118" rx="46" fill="${SKIN}" stroke="${INK}" stroke-width="4" filter="url(#rough)"/>`;
+    s+=`<path d="M70 150 Q112 160 160 150" fill="none" stroke="${INK}" stroke-width="2.5" opacity=".35" stroke-linecap="round"/>`;
+    s+=`<g class="thumb" data-i="4"><rect x="26" y="110" width="30" height="92" rx="15" fill="${SKIN}" stroke="${INK}" stroke-width="4"/></g>`;
+    // 數字徽章（伸出時顯示正在數的數）
+    const pos=FINGERS.map(f=>[f.x+f.w/2,f.y-20]).concat([[-2,98]]);
+    pos.forEach(([cx,cy],i)=>{
+      s+=`<g class="badge" data-i="${i}" transform="translate(${cx} ${cy})"><circle r="18" fill="#fbe7a6" stroke="${INK}" stroke-width="3"/><text y="1"></text></g>`;
+    });
+    handSvgs.forEach(h=>h.innerHTML=s);
+    handSvgs[1].hidden = B<=5;                 // 加數超過 5 才需要第二隻手
+    handBox.classList.toggle('two', B>5);
+    handLabel.innerHTML=`要伸出 <b>${B}</b> 根手指`;
+  }
+  // 第 k 根（0 起算）：0–4 在第一隻手，5–8 在第二隻手
+  const handOf = k => handSvgs[k<5?0:1];
+  const fingerEl = k => { const j=k%5; return handOf(k).querySelector(j<4?`.finger[data-i="${j}"]`:'.thumb'); };
+  // 先把要往上數的手指全部伸出來
+  async function raiseAll(){
+    for(let k=0;k<B;k++){
+      fingerEl(k).classList.add('raised');
+      handLabel.innerHTML=`伸出 <b>${k+1}</b> 根手指`;
+      await wait(reduce?100:350);
+    }
+  }
+  // 數數時，一根一根點過去
+  async function tapFinger(k, label){
+    fingerEl(k).classList.add('tapped');
+    const b=handOf(k).querySelector(`.badge[data-i="${k%5}"]`);
+    b.querySelector('text').textContent=label; b.classList.add('on');
+    handLabel.innerHTML=`數到第 <b>${k+1}</b> / ${B} 根手指`;
+    await wait(reduce?150:450);
+  }
+  function tipStar(k){                 // 從指尖出發的小星星
+    const br=board.getBoundingClientRect(), fr=fingerEl(k).getBoundingClientRect();
+    const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    s.setAttribute('viewBox','0 0 100 100'); s.innerHTML='<use href="#starShape"/>';
+    s.style.cssText=`position:absolute;width:40px;height:40px;left:${fr.left-br.left+fr.width/2-20}px;top:${fr.top-br.top-10}px;z-index:4`;
+    board.appendChild(s); return s;
+  }
+  function applyAddMode(){
+    starsBox.hidden = addMode!=='star';
+    handBox.hidden = addMode!=='hand';
+    document.querySelectorAll('.chip[data-add]').forEach(c=>c.setAttribute('aria-pressed', String(c.dataset.add===addMode)));
+  }
+  const leftEl = () => mode==='frame' ? framesEl : circle;
+  function applyMode(){
+    circleBox.hidden = mode!=='number';
+    framesBox.hidden = mode!=='frame';
+    document.querySelectorAll('.chip[data-mode]').forEach(c=>c.setAttribute('aria-pressed', String(c.dataset.mode===mode)));
+  }
+
+  const zh = n => {
+    const d=['零','一','二','三','四','五','六','七','八','九'];
+    if(n<10) return d[n]; if(n===10) return '十';
+    if(n<20) return '十'+d[n-10];
+    return d[Math.floor(n/10)]+'十'+(n%10?d[n%10]:'');
+  };
+
+  let A=8, B=3, phase='idle', run=0;
+
+  /* ---------- 語音 ---------- */
+  const synth = window.speechSynthesis;
+  let voice=null, voices=[];
+  const voiceSel=$('voiceSel');
+  const isTW = v=>/zh[-_]TW/i.test(v.lang);
+  const isZh = v=>/^(zh|cmn|yue)/i.test(v.lang);
+  // 預設順序：Google 台灣中文 → 其他台灣中文 → 其他中文
+  function defaultVoice(vs){
+    return vs.find(v=>isTW(v) && /google/i.test(v.name))
+        || vs.find(v=>isTW(v))
+        || vs.find(v=>/zh[-_](HK|Hant)/i.test(v.lang))
+        || vs.find(isZh) || null;
+  }
+  function loadVoices(){
+    if(!synth) return;
+    const vs=synth.getVoices();
+    if(!vs.length) return;
+    const rank=v=> isTW(v)?(/google/i.test(v.name)?0:1) : isZh(v)?2 : 3;
+    voices=[...vs].sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name));
+    let saved=null; try{ saved=localStorage.getItem('countingOnVoice'); }catch(e){}
+    const keep = voice ? voice.voiceURI : null;
+    voice = voices.find(v=>v.voiceURI===keep) || voices.find(v=>v.voiceURI===saved) || defaultVoice(voices);
+    voiceSel.innerHTML='';
+    const groups=[['台灣中文',v=>isTW(v)],['其他中文',v=>!isTW(v)&&isZh(v)],['其他語言',v=>!isZh(v)]];
+    groups.forEach(([label,test])=>{
+      const list=voices.filter(test); if(!list.length) return;
+      const g=document.createElement('optgroup'); g.label=label;
+      list.forEach(v=>{
+        const o=document.createElement('option');
+        o.value=v.voiceURI;
+        o.textContent=v.name.replace(/^Microsoft\s+/,'')+(isZh(v)?'':`（${v.lang}）`);
+        g.appendChild(o);
+      });
+      voiceSel.appendChild(g);
+    });
+    if(voice) voiceSel.value=voice.voiceURI;
+    voiceWarn.hidden = !!(voice && isZh(voice));
+  }
+  voiceSel.addEventListener('change',()=>{
+    voice=voices.find(v=>v.voiceURI===voiceSel.value)||null;
+    try{ localStorage.setItem('countingOnVoice',voiceSel.value); }catch(e){}
+    voiceWarn.hidden = !!(voice && isZh(voice));
+  });
+  $('testVoice').addEventListener('click',()=>{
+    if(!synth) return;
+    synth.cancel();
+    say('你好，我們一起來數數：九、十、十一！');
+  });
+  if(synth){ loadVoices(); synth.onvoiceschanged=loadVoices; setTimeout(loadVoices,800); }
+  else { voiceWarn.hidden=false; voiceSel.innerHTML='<option>此瀏覽器不支援語音</option>'; voiceSel.disabled=true; }
+
+  // 說完才 resolve；沒有語音或卡住時用估計時間保底
+  function say(text, rate=0.85){
+    return new Promise(res=>{
+      const est = 600 + text.length*330/rate;
+      if(!synth){ setTimeout(res, est); return; }
+      const u=new SpeechSynthesisUtterance(text);
+      if(voice){ u.voice=voice; u.lang=voice.lang; } else u.lang='zh-TW';
+      u.rate=rate; u.pitch=1.15;
+      let done=false; const fin=()=>{ if(!done){done=true; clearTimeout(t); res();} };
+      const t=setTimeout(fin, est+2500);
+      u.onend=fin; u.onerror=fin;
+      synth.speak(u);
+    });
+  }
+  const wait = ms => new Promise(r=>setTimeout(r,ms));
+  const alive = id => id===run;
+
+  /* ---------- 畫面 ---------- */
+  function setFill(c){ circle.style.setProperty('--c-fill',c); }
+  function buildStars(){
+    starsBox.innerHTML='';
+    starsBox.classList.toggle('many', B>3);
+    for(let i=0;i<B;i++){
+      const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      s.setAttribute('class','star'); s.setAttribute('viewBox','0 0 100 100');
+      s.innerHTML='<use href="#starShape"/>';
+      starsBox.appendChild(s);
+    }
+  }
+  function reset(){
+    run++;
+    if(synth) synth.cancel();
+    phase='idle';
+    num.textContent=A;
+    setFill('#f7c6d0');
+    circle.classList.remove('done','flash');
+    mind.textContent='記在心裡';
+    caption.innerHTML=`按下「播放」，一起來心算 <mark>${A} + ${B}</mark>`;
+    equation.classList.remove('show'); equation.innerHTML='';
+    bigword.classList.remove('pop'); bigword.textContent='';
+    board.querySelectorAll('.flyer').forEach(f=>f.remove());
+    stopConfetti();
+    buildStars();
+    buildFrames(); framesBox.classList.remove('done'); applyMode();
+    buildHand(); handBox.classList.remove('show'); applyAddMode();
+    mainBtn.textContent='▶ 播放'; mainBtn.disabled=false;
+  }
+
+  function popWord(t){
+    bigword.textContent=t;
+    bigword.classList.remove('pop'); void bigword.offsetWidth; bigword.classList.add('pop');
+  }
+  function flash(){
+    circle.classList.remove('flash'); void circle.offsetWidth; circle.classList.add('flash');
+  }
+
+  function fly(star, target){
+    const b=board.getBoundingClientRect(), s=star.getBoundingClientRect(), c=target.getBoundingClientRect();
+    const f=star.cloneNode(true); f.classList.remove('show','wiggle'); f.classList.add('flyer');
+    f.style.cssText=`left:${s.left-b.left}px;top:${s.top-b.top}px;width:${s.width}px;height:${s.height}px;opacity:1;transform:none`;
+    board.appendChild(f); star.classList.add('gone');
+    const dx=(c.left+c.width/2)-(s.left+s.width/2), dy=(c.top+c.height/2)-(s.top+s.height/2);
+    const dur = reduce?300:900;
+    const anim=f.animate([
+      {transform:'translate(0,0) scale(1) rotate(0)'},
+      {transform:`translate(${dx*0.25}px,${dy*0.25-90}px) scale(1.2) rotate(120deg)`,offset:.35},
+      {transform:`translate(${dx*0.7}px,${dy*0.7-60}px) scale(1) rotate(260deg)`,offset:.7},
+      {transform:`translate(${dx}px,${dy}px) scale(.3) rotate(360deg)`,opacity:.2}
+    ],{duration:dur,easing:'ease-in',fill:'forwards'});
+    return anim.finished.then(()=>f.remove());
+  }
+
+  /* ---------- 分鏡 ---------- */
+  async function stage1(){
+    const id=++run; phase='intro';
+    mainBtn.disabled=true;
+    const big = A>=B ? '大數 ' : '';
+    caption.innerHTML=`把${big}<mark>${A}</mark> 記在心裡`;
+    await say(`心算 ${A} 加 ${B}，我們先把${big}${A} 記在心裡。`);
+    if(!alive(id)) return;
+    if(addMode==='hand'){
+      caption.innerHTML=`用手指頭往上數 <mark>${B}</mark> 個`;
+      handBox.classList.add('show');
+      await say(`要往上數 ${B} 個，先伸出 ${B} 根手指。`);
+      if(!alive(id)) return;
+      await raiseAll();
+      if(!alive(id)) return;
+      caption.innerHTML=`伸出 <mark>${B}</mark> 根手指，一根一根數`;
+    } else {
+      caption.innerHTML=`再往上數 <mark>${B}</mark> 個`;
+      const stars=[...starsBox.children];
+      for(const s of stars){ s.classList.add('show'); await wait(220); }
+      await wait(500);
+      if(!alive(id)) return;
+      stars.forEach(s=>{ s.classList.remove('show'); s.style.opacity=1; s.style.transform='none'; s.classList.add('wiggle'); });
+    }
+    phase='ready';
+    mainBtn.textContent='★ 開始數數'; mainBtn.disabled=false;
+  }
+
+  async function stage2(){
+    const id=++run; phase='counting';
+    mainBtn.disabled=true;
+    caption.innerHTML=`從 <mark>${A}</mark> 接著往上數`;
+    const stars=[...starsBox.children];
+    let n=A;
+    for(let k=0;k<B;k++){
+      if(!alive(id)) return;
+      const target = mode==='frame' ? cellAt(n+1) : circle;
+      if(addMode==='hand'){
+        await tapFinger(k, n+1);
+        if(!alive(id)) return;
+        const t=tipStar(k);
+        await fly(t, target); t.remove();
+      } else {
+        stars[k].classList.remove('wiggle');
+        await fly(stars[k], target);
+      }
+      if(!alive(id)) return;
+      n++;
+      num.textContent=n; flash(); popWord(zh(n));
+      addApple(n,true); framesCount.textContent=n;
+      await Promise.all([say(zh(n)+'！',0.8), wait(1200)]);   // 每顆至少間隔 1.2 秒
+    }
+    if(!alive(id)) return;
+    await stage3(id);
+  }
+
+  async function stage3(id){
+    phase='done';
+    await wait(300);
+    setFill('#f2c14e'); circle.classList.add('done'); framesBox.classList.add('done');
+    mind.textContent='答案出來了！';
+    caption.innerHTML=`${A} 向上數 ${B} 個`;
+    equation.innerHTML=`${A} + ${B} = <b>${A+B}</b>`;
+    equation.classList.add('show');
+    startConfetti();
+    await say(addMode==='hand'
+      ? `${B} 根手指都數完了。所以，${A} 向上數 ${B} 個，答案就是 ${A+B}！`
+      : `所以，${A} 向上數 ${B} 個，答案就是 ${A+B}！`);
+    if(!alive(id)) return;
+    mainBtn.textContent='✓ 完成'; mainBtn.disabled=true;
+  }
+
+  mainBtn.addEventListener('click',()=>{
+    if(phase==='idle') stage1();
+    else if(phase==='ready') stage2();
+  });
+  replayBtn.addEventListener('click',()=>{ reset(); stage1(); });
+  document.querySelectorAll('.chip[data-add]').forEach(ch=>ch.addEventListener('click',()=>{
+    if(addMode===ch.dataset.add) return;
+    addMode=ch.dataset.add;
+    try{ localStorage.setItem('countingOnAdd',addMode); }catch(e){}
+    reset();
+  }));
+  document.querySelectorAll('.chip[data-mode]').forEach(ch=>ch.addEventListener('click',()=>{
+    if(mode===ch.dataset.mode) return;
+    mode=ch.dataset.mode;
+    try{ localStorage.setItem('countingOnMode',mode); }catch(e){}
+    reset();
+  }));
+  /* ---------- 首頁：範圍設定 ---------- */
+  const home=$('home'), learn=$('learn');
+  const sel = {aMin:$('aMin'),aMax:$('aMax'),bMin:$('bMin'),bMax:$('bMax')};
+  const bigFirst=$('bigFirst'), pairCount=$('pairCount'), startBtn=$('startBtn');
+  Object.values(sel).forEach(s=>{ for(let i=1;i<=9;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; s.appendChild(o);} });
+  let cfg={aMin:1,aMax:9,bMin:1,bMax:9,big:true};
+  try{ const c=JSON.parse(localStorage.getItem('countingOnRange')||'null'); if(c) cfg=Object.assign(cfg,c); }catch(e){}
+  sel.aMin.value=cfg.aMin; sel.aMax.value=cfg.aMax; sel.bMin.value=cfg.bMin; sel.bMax.value=cfg.bMax; bigFirst.checked=cfg.big;
+  let pairs=[];
+  function readCfg(){
+    let a1=+sel.aMin.value,a2=+sel.aMax.value,b1=+sel.bMin.value,b2=+sel.bMax.value;
+    if(a1>a2){ [a1,a2]=[a2,a1]; sel.aMin.value=a1; sel.aMax.value=a2; }
+    if(b1>b2){ [b1,b2]=[b2,b1]; sel.bMin.value=b1; sel.bMax.value=b2; }
+    cfg={aMin:a1,aMax:a2,bMin:b1,bMax:b2,big:bigFirst.checked};
+    pairs=[];
+    for(let a=a1;a<=a2;a++) for(let b=b1;b<=b2;b++) if(!cfg.big || a>=b) pairs.push([a,b]);
+    if(pairs.length){
+      pairCount.className='pair-count';
+      pairCount.innerHTML=`共 <b>${pairs.length}</b> 種題目`;
+    } else {
+      pairCount.className='pair-count bad';
+      pairCount.textContent='這個範圍沒有「大數放前面」的題目，請調整範圍或取消勾選。';
+    }
+    startBtn.disabled=!pairs.length;
+    try{ localStorage.setItem('countingOnRange',JSON.stringify(cfg)); }catch(e){}
+  }
+  [...Object.values(sel),bigFirst].forEach(el=>el.addEventListener('change',readCfg));
+  readCfg();
+  const rangeText = () => `被加數 ${cfg.aMin}–${cfg.aMax}，加數 ${cfg.bMin}–${cfg.bMax}${cfg.big?'，大數在前':''}`;
+  function pickPair(){
+    let pool=pairs.filter(([a,b])=>!(a===A&&b===B));
+    if(!pool.length) pool=pairs;
+    return pool[Math.random()*pool.length|0];
+  }
+  function nextProblem(){ [A,B]=pickPair(); reset(); stage1(); }
+  startBtn.addEventListener('click',()=>{
+    readCfg(); if(!pairs.length) return;
+    $('rangeTag').textContent=rangeText();
+    home.hidden=true; learn.hidden=false;
+    window.scrollTo(0,0);
+    nextProblem();
+  });
+  $('nextBtn').addEventListener('click',nextProblem);
+  $('homeBtn').addEventListener('click',()=>{
+    run++; if(synth) synth.cancel();
+    learn.hidden=true; home.hidden=false; window.scrollTo(0,0);
+  });
+
+  /* ---------- 作業單 ---------- */
+  const panel=$('sheetPanel'), sheetStatus=$('sheetStatus');
+  function setStatus(t,err){ sheetStatus.textContent=t; sheetStatus.classList.toggle('err',!!err); }
+  $('sheetBtn').addEventListener('click',()=>{
+    $('sheetRange').textContent=`題目會從目前的範圍隨機出題（${rangeText()}）。`;
+    setStatus(''); panel.hidden=false; $('docxBtn').focus();
+  });
+  $('sheetClose').addEventListener('click',()=>{ panel.hidden=true; $('sheetBtn').focus(); });
+  panel.addEventListener('click',e=>{ if(e.target===panel) panel.hidden=true; });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !panel.hidden) panel.hidden=true; });
+
+  function makeProblems(n){
+    const out=[]; let bag=[];
+    while(out.length<n){
+      if(!bag.length) bag=pairs.slice().sort(()=>Math.random()-.5);
+      const p=bag.pop();
+      if(out.length && out[out.length-1][0]===p[0] && out[out.length-1][1]===p[1] && pairs.length>1) continue;
+      out.push(p);
+    }
+    return out;
+  }
+  const stamp = () => { const d=new Date(); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
+
+  // 下載：在 Claude 的頁面裡用平台的 downloads 功能；在下載版 HTML 裡用一般下載
+  let dlPromise=null;
+  function getDownloads(){
+    if(!window.claude || typeof window.claude.use!=='function') return Promise.resolve(undefined);
+    return dlPromise || (dlPromise = window.claude.use('downloads').catch(()=>null));
+  }
+  async function saveFile(filename, blob){
+    const dl = await getDownloads();
+    if(dl){
+      try{ await dl.save({filename, data:blob}); return {ok:true}; }
+      catch(e){
+        const code=e && e.code;
+        if(code==='declined') return {ok:false,msg:'已取消下載。'};
+        if(code==='rate_limited') return {ok:false,msg:'上一個下載視窗還開著，請先完成它。'};
+        return {ok:false,msg:'這個畫面目前不能下載檔案，請改用下載版 HTML 檔。'};
+      }
+    }
+    if(dl===null) return {ok:false,msg:'這個畫面目前不能下載檔案，請改用下載版 HTML 檔。'};
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    return {ok:true};
+  }
+
+  /* Word（.docx） */
+  const xesc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function run_(text,{size=28,bold=false,color}={}){
+    return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="標楷體"/>${bold?'<w:b/>':''}${color?`<w:color w:val="${color}"/>`:''}<w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr><w:t xml:space="preserve">${xesc(text)}</w:t></w:r>`;
+  }
+  function para(runs,{align,after=120,before=0,pageBreak=false}={}){
+    return `<w:p><w:pPr>${pageBreak?'<w:pageBreakBefore/>':''}<w:spacing w:before="${before}" w:after="${after}"/>${align?`<w:jc w:val="${align}"/>`:''}</w:pPr>${runs}</w:p>`;
+  }
+  function table(cells, cols, rowH){
+    const W=9638, cw=Math.floor(W/cols);
+    let x=`<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>
+<w:top w:val="single" w:sz="8" w:color="4A4057"/><w:left w:val="single" w:sz="8" w:color="4A4057"/><w:bottom w:val="single" w:sz="8" w:color="4A4057"/><w:right w:val="single" w:sz="8" w:color="4A4057"/>
+<w:insideH w:val="dashed" w:sz="4" w:color="8A7F96"/><w:insideV w:val="dashed" w:sz="4" w:color="8A7F96"/></w:tblBorders>
+<w:tblCellMar><w:top w:w="120" w:type="dxa"/><w:left w:w="200" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>`;
+    for(let c=0;c<cols;c++) x+=`<w:gridCol w:w="${cw}"/>`;
+    x+='</w:tblGrid>';
+    for(let r=0;r<Math.ceil(cells.length/cols);r++){
+      x+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${rowH}"/></w:trPr>`;
+      for(let c=0;c<cols;c++){
+        const cell=cells[r*cols+c];
+        x+=`<w:tc><w:tcPr><w:tcW w:w="${cw}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${cell||para('')}</w:tc>`;
+      }
+      x+='</w:tr>';
+    }
+    return x+'</w:tbl>';
+  }
+  async function buildDocx(probs,hint,key){
+    let body='';
+    body+=para(run_('向上數心算練習單',{size:40,bold:true}),{align:'center',after:160});
+    body+=para(run_('班級：________　座號：______　姓名：______________　日期：________',{size:24}),{align:'center',after:160});
+    body+=para(run_('做法：先把大數記在心裡，再一個一個往上數，數完就是答案。',{size:24,color:'5A5066'}),{after:200});
+    const cells=probs.map(([a,b],i)=>{
+      let c=para(run_(`(${i+1})　`,{size:24,color:'8A7F96'})+run_(`${a} + ${b} = ________`,{size:36,bold:true}),{after:hint?60:0});
+      if(hint) c+=para(run_('記住 ______，往上數 ______ 個',{size:22,color:'6A6076'}),{after:0});
+      return c;
+    });
+    body+=table(cells,2,hint?1150:820);
+    if(key){
+      body+=para(run_('答案',{size:36,bold:true}),{align:'center',after:200,pageBreak:true});
+      const kc=probs.map(([a,b],i)=>para(run_(`(${i+1})　${a} + ${b} = ${a+b}`,{size:28}),{after:0}));
+      body+=table(kc,4,520);
+    }
+    const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const zip=new JSZip();
+    zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    zip.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    zip.file('word/document.xml',doc);
+    return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  /* PDF：先畫在畫布上（中文字才不會變亂碼），再放進 PDF */
+  const PW=1654, PH=2339, M=118;   // A4，約 200 dpi
+  const CJK='"LXGW WenKai TC","Kaiti TC","DFKai-SB","標楷體","PingFang TC","Microsoft JhengHei",sans-serif';
+  const DIG='"Gaegu","LXGW WenKai TC","Comic Sans MS",sans-serif';
+  async function loadFonts(){
+    try{
+      await Promise.race([Promise.all([
+        document.fonts.load(`700 60px "LXGW WenKai TC"`,'向上數心算練習單班級座號姓名日期做法先把大數記在心裡再一個往數完就是答案住個'),
+        document.fonts.load(`400 30px "LXGW WenKai TC"`,'向上數心算練習單班級座號姓名日期做法先把大數記在心裡再一個往數完就是答案住個：，。'),
+        document.fonts.load(`700 60px "Gaegu"`,'0123456789+=()')
+      ]), wait(4000)]);
+    }catch(e){}
+  }
+  function pageCanvas(){
+    const c=document.createElement('canvas'); c.width=PW; c.height=PH;
+    const g=c.getContext('2d'); g.fillStyle='#ffffff'; g.fillRect(0,0,PW,PH);
+    g.fillStyle='#4a4057'; g.strokeStyle='#4a4057'; g.textBaseline='alphabetic';
+    return [c,g];
+  }
+  function drawStar(g,x,y,r,fill){
+    g.save(); g.beginPath();
+    for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr=i%2?r*.45:r; g.lineTo(x+rr*Math.cos(a), y+rr*Math.sin(a)); }
+    g.closePath(); g.fillStyle=fill; g.fill(); g.lineWidth=4; g.strokeStyle='#4a4057'; g.lineJoin='round'; g.stroke(); g.restore();
+  }
+  function drawSheet(probs,hint){
+    const [c,g]=pageCanvas();
+    g.textAlign='center';
+    g.font=`700 72px ${CJK}`; g.fillText('向上數心算練習單',PW/2,M+70);
+    drawStar(g,PW/2-360,M+45,30,'#fbe08a'); drawStar(g,PW/2+360,M+45,30,'#bfe6d6');
+    g.font=`400 34px ${CJK}`;
+    g.fillText('班級：________　座號：______　姓名：______________　日期：________',PW/2,M+150);
+    g.textAlign='left'; g.fillStyle='#5a5066'; g.font=`400 32px ${CJK}`;
+    g.fillText('做法：先把大數記在心裡，再一個一個往上數，數完就是答案。',M,M+225);
+    const top=M+265, rows=Math.ceil(probs.length/2), colW=(PW-2*M)/2;
+    const rowH=Math.min(hint?185:150,(PH-M-top)/rows);
+    g.lineWidth=3; g.strokeStyle='#4a4057';
+    g.strokeRect(M,top,PW-2*M,rowH*rows);
+    g.setLineDash([10,10]); g.strokeStyle='#8a7f96'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(M+colW,top); g.lineTo(M+colW,top+rowH*rows);
+    for(let r=1;r<rows;r++){ g.moveTo(M,top+r*rowH); g.lineTo(PW-M,top+r*rowH); }
+    g.stroke(); g.setLineDash([]);
+    probs.forEach(([a,b],i)=>{
+      const col=i%2, row=Math.floor(i/2), x=M+col*colW+34, y=top+row*rowH;
+      const base = hint ? y+rowH*0.48 : y+rowH*0.62;
+      g.fillStyle='#8a7f96'; g.font=`400 30px ${CJK}`; g.fillText(`(${i+1})`,x,base);
+      g.fillStyle='#4a4057'; g.font=`700 64px ${DIG}`;
+      const t=`${a} + ${b} =`; g.fillText(t,x+70,base);
+      const w=g.measureText(t).width;
+      g.lineWidth=3; g.beginPath(); g.moveTo(x+70+w+20,base+6); g.lineTo(x+colW-70,base+6); g.stroke();
+      if(hint){
+        g.fillStyle='#6a6076'; g.font=`400 30px ${CJK}`;
+        g.fillText('記住 ______，往上數 ______ 個',x+70,base+60);
+      }
+    });
+    return c;
+  }
+  function drawKey(probs){
+    const [c,g]=pageCanvas();
+    g.textAlign='center'; g.font=`700 64px ${CJK}`; g.fillText('答案',PW/2,M+60);
+    g.textAlign='left';
+    const cols=4, colW=(PW-2*M)/cols, rowH=92, top=M+130;
+    probs.forEach(([a,b],i)=>{
+      const x=M+(i%cols)*colW, y=top+Math.floor(i/cols)*rowH;
+      g.fillStyle='#8a7f96'; g.font=`400 28px ${CJK}`; g.fillText(`(${i+1})`,x,y+50);
+      g.fillStyle='#4a4057'; g.font=`700 44px ${DIG}`; g.fillText(`${a}+${b}=${a+b}`,x+64,y+52);
+    });
+    return c;
+  }
+  async function buildPdf(probs,hint,key){
+    await loadFonts();
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+    pdf.addImage(drawSheet(probs,hint).toDataURL('image/jpeg',0.92),'JPEG',0,0,210,297);
+    if(key){ pdf.addPage(); pdf.addImage(drawKey(probs).toDataURL('image/jpeg',0.92),'JPEG',0,0,210,297); }
+    return pdf.output('blob');
+  }
+
+  async function exportSheet(kind){
+    const btns=[$('docxBtn'),$('pdfBtn')];
+    if(kind==='docx' && !window.JSZip){ setStatus('Word 工具沒有載入成功，請確認網路連線後重新整理。',true); return; }
+    if(kind==='pdf' && !(window.jspdf && window.jspdf.jsPDF)){ setStatus('PDF 工具沒有載入成功，請確認網路連線後重新整理。',true); return; }
+    btns.forEach(b=>b.disabled=true);
+    setStatus('正在產生作業單…');
+    try{
+      const probs=makeProblems(+$('sheetCount').value), hint=$('sheetHint').checked, key=$('sheetKey').checked;
+      const blob = kind==='docx' ? await buildDocx(probs,hint,key) : await buildPdf(probs,hint,key);
+      const name=`向上數心算練習單_${stamp()}.${kind}`;
+      setStatus('請在跳出的視窗確認下載…');
+      const r=await saveFile(name,blob);
+      setStatus(r.ok ? `已產生「${name}」。` : r.msg, !r.ok);
+    }catch(e){
+      setStatus('產生作業單時出了問題，請再試一次。',true);
+    }finally{
+      btns.forEach(b=>b.disabled=false);
+    }
+  }
+  $('docxBtn').addEventListener('click',()=>exportSheet('docx'));
+  $('pdfBtn').addEventListener('click',()=>exportSheet('pdf'));
+
+  /* ---------- 彩色紙屑 ---------- */
+  const ctx=canvas.getContext('2d'); let parts=[], raf=0;
+  const cols=['#f7c6d0','#bfe6d6','#c6dcf5','#dccdf2','#fbe7a6','#f2c14e'];
+  function startConfetti(){
+    if(reduce) return;
+    const r=board.getBoundingClientRect(), dpr=devicePixelRatio||1;
+    canvas.width=r.width*dpr; canvas.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    const c=leftEl().getBoundingClientRect(), cx=c.left-r.left+c.width/2, cy=c.top-r.top+c.height/2;
+    parts=Array.from({length:140},()=>({x:cx,y:cy,vx:(Math.random()-.5)*11,vy:-Math.random()*11-3,
+      w:6+Math.random()*7,h:4+Math.random()*5,a:Math.random()*6,va:(Math.random()-.5)*.3,c:cols[Math.random()*cols.length|0],life:0}));
+    cancelAnimationFrame(raf);
+    const tick=()=>{
+      ctx.clearRect(0,0,r.width,r.height);
+      parts.forEach(p=>{p.vy+=.28;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;p.life++;
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.fillStyle=p.c;ctx.strokeStyle='#4a4057';ctx.lineWidth=1;
+        ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.strokeRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});
+      parts=parts.filter(p=>p.y<r.height+20&&p.life<260);
+      if(parts.length) raf=requestAnimationFrame(tick); else ctx.clearRect(0,0,r.width,r.height);
+    };
+    tick();
+  }
+  function stopConfetti(){ cancelAnimationFrame(raf); parts=[]; ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+  reset();
+})();
+</script>
+
+</body>
+</html>
