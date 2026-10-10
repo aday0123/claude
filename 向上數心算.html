@@ -470,17 +470,26 @@ h1 small{font-size:.55em;color:var(--ink-soft);font-weight:400;margin-left:.4em}
   $('testVoice').addEventListener('click',()=>{
     if(!synth) return;
     synth.cancel();
-    say('你好，我們一起來數數：九、十、十一！');
+    say('你好，我們一起來數一數：九、十、十一！');
   });
   if(synth){ loadVoices(); synth.onvoiceschanged=loadVoices; setTimeout(loadVoices,800); }
   else { voiceWarn.hidden=false; voiceSel.innerHTML='<option>此瀏覽器不支援語音</option>'; voiceSel.disabled=true; }
 
+  // 讀音修正：動詞「數」（數一數、往上數、數完）要唸三聲，
+  // 語音引擎常唸成四聲，所以朗讀時改用同音字「鼠」。名詞「大數」不改。
+  // 只影響語音，畫面上的字不變。
+  function fixPron(t){
+    return t
+      .replace(/數一數/g,'鼠一鼠')
+      .replace(/數(?=完|到|著)/g,'鼠')
+      .replace(/(上|往|來|再|要|先|著|起)數/g,'$1鼠');
+  }
   // 說完才 resolve；沒有語音或卡住時用估計時間保底
   function say(text, rate=0.85){
     return new Promise(res=>{
       const est = 600 + text.length*330/rate;
       if(!synth){ setTimeout(res, est); return; }
-      const u=new SpeechSynthesisUtterance(text);
+      const u=new SpeechSynthesisUtterance(fixPron(text));
       if(voice){ u.voice=voice; u.lang=voice.lang; } else u.lang='zh-TW';
       u.rate=rate; u.pitch=1.15;
       let done=false; const fin=()=>{ if(!done){done=true; clearTimeout(t); res();} };
